@@ -11,9 +11,10 @@ import { parseOrderText } from './services/geminiService';
 import { Building2, Plus, X, Loader2, Sparkles } from 'lucide-react';
 
 const INITIAL_EMPLOYEES: User[] = [
-  { id: '1', name: 'Admin Root', username: 'admin', role: UserRole.ADMIN, password: 'password', company: Company.RESEVALLEY },
+  { id: '1', name: 'Admin Root', username: 'admin', role: UserRole.ADMIN, password: 'admin', company: Company.RESEVALLEY },
   { id: '2', name: 'Sarah Miller', username: 'sarah_m', role: UserRole.EMPLOYEE, password: 'password', company: Company.RESEVALLEY },
   { id: '3', name: 'Mike Johnson', username: 'mike_j', role: UserRole.EMPLOYEE, password: 'password', company: Company.ROSEWORLD },
+  { id: '4', name: 'Rose Admin', username: 'admin', role: UserRole.ADMIN, password: 'admin', company: Company.ROSEWORLD },
 ];
 
 const App: React.FC = () => {
@@ -54,15 +55,15 @@ const App: React.FC = () => {
 
   useEffect(() => {
     localStorage.setItem('employees_data', JSON.stringify(employees));
-    // If current user is in the list, update their local session too
+    // Sync current user session if their data in the list changes
     if (currentUser) {
       const updatedMe = employees.find(e => e.id === currentUser.id);
-      if (updatedMe) {
+      if (updatedMe && (updatedMe.name !== currentUser.name || updatedMe.profilePicture !== currentUser.profilePicture)) {
         setCurrentUser(updatedMe);
         localStorage.setItem('current_user', JSON.stringify(updatedMe));
       }
     }
-  }, [employees]);
+  }, [employees, currentUser]);
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
@@ -124,14 +125,19 @@ const App: React.FC = () => {
       id: Math.random().toString(36).substr(2, 9),
       name: empData.name || 'Unknown',
       username: empData.username || 'user',
-      role: UserRole.EMPLOYEE,
+      role: empData.role || UserRole.EMPLOYEE,
       password: empData.password || 'password',
       company: company!,
+      profilePicture: empData.profilePicture,
     };
     setEmployees([...employees, newEmp]);
   };
 
   const handleDeleteEmployee = (id: string) => {
+    if (currentUser && currentUser.id === id) {
+      alert("You cannot delete yourself.");
+      return;
+    }
     setEmployees(employees.filter(e => e.id !== id));
   };
 

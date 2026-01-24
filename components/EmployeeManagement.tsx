@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { User, UserRole } from '../types';
-import { UserPlus, Key, Mail, X, Trash2, Users } from 'lucide-react';
+import { UserPlus, Key, Mail, X, Trash2, Users, Camera, Shield, User as UserIcon } from 'lucide-react';
 
 interface EmployeeManagementProps {
   employees: User[];
@@ -11,12 +11,30 @@ interface EmployeeManagementProps {
 
 const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees, onAddEmployee, onDeleteEmployee }) => {
   const [showAddModal, setShowAddModal] = useState(false);
-  const [formData, setFormData] = useState({ name: '', username: '', password: '' });
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    username: '', 
+    password: '', 
+    role: UserRole.EMPLOYEE,
+    profilePicture: ''
+  });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, profilePicture: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAddEmployee({ ...formData, role: UserRole.EMPLOYEE });
-    setFormData({ name: '', username: '', password: '' });
+    onAddEmployee({ ...formData });
+    setFormData({ name: '', username: '', password: '', role: UserRole.EMPLOYEE, profilePicture: '' });
     setShowAddModal(false);
   };
 
@@ -33,7 +51,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees, onAd
           className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-indigo-100 w-full sm:w-auto text-sm lg:text-base"
         >
           <UserPlus size={20} />
-          Invite Employee
+          Add Employee
         </button>
       </div>
 
@@ -53,32 +71,31 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees, onAd
                 <tr key={emp.id} className="hover:bg-gray-50 group transition-all">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3 text-sm font-semibold text-gray-900">
-                      <div className="w-8 h-8 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold text-xs uppercase">
-                        {emp.name.split(' ').map(n => n[0]).join('')}
-                      </div>
+                      {emp.profilePicture ? (
+                        <img src={emp.profilePicture} className="w-8 h-8 rounded-full object-cover border border-gray-200" alt={emp.name} />
+                      ) : (
+                        <div className="w-8 h-8 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold text-xs uppercase">
+                          {emp.name.split(' ').map(n => n[0]).join('')}
+                        </div>
+                      )}
                       {emp.name}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">{emp.username}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-3 h-full">
-                       {/* Role Tag on the left of delete button */}
                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                         emp.role === UserRole.ADMIN ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'
                        }`}>
                         {emp.role}
                        </span>
-                       {emp.role !== UserRole.ADMIN ? (
-                         <button 
-                          onClick={() => onDeleteEmployee(emp.id)}
-                          className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                          title="Delete Employee"
-                         >
-                           <Trash2 size={18} />
-                         </button>
-                       ) : (
-                         <div className="w-9 h-9" /> /* Spacer to keep alignment consistent */
-                       )}
+                       <button 
+                        onClick={() => onDeleteEmployee(emp.id)}
+                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                        title="Delete Account"
+                       >
+                         <Trash2 size={18} />
+                       </button>
                     </div>
                   </td>
                 </tr>
@@ -92,9 +109,13 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees, onAd
           {employees.map((emp) => (
             <div key={emp.id} className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold text-xs uppercase">
-                  {emp.name.split(' ').map(n => n[0]).join('')}
-                </div>
+                {emp.profilePicture ? (
+                  <img src={emp.profilePicture} className="w-10 h-10 rounded-full object-cover border border-gray-200" alt={emp.name} />
+                ) : (
+                  <div className="w-10 h-10 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold text-xs uppercase">
+                    {emp.name.split(' ').map(n => n[0]).join('')}
+                  </div>
+                )}
                 <div>
                   <p className="text-sm font-bold text-gray-900 leading-tight">{emp.name}</p>
                   <p className="text-xs text-gray-500">@{emp.username}</p>
@@ -106,11 +127,9 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees, onAd
                 }`}>
                   {emp.role}
                 </span>
-                {emp.role !== UserRole.ADMIN && (
-                   <button onClick={() => onDeleteEmployee(emp.id)} className="text-red-400 p-1">
-                     <Trash2 size={18} />
-                   </button>
-                )}
+                <button onClick={() => onDeleteEmployee(emp.id)} className="text-red-400 p-1">
+                  <Trash2 size={18} />
+                </button>
               </div>
             </div>
           ))}
@@ -122,20 +141,43 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees, onAd
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-slideUp">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-900">Invite New Employee</h3>
+              <h3 className="text-lg font-bold text-gray-900">Add New User</h3>
               <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                 <X size={20} />
               </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              {/* Profile Pic Preview & Selector */}
+              <div className="flex flex-col items-center gap-2 mb-4">
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden">
+                    {formData.profilePicture ? (
+                      <img src={formData.profilePicture} className="w-full h-full object-cover" alt="Preview" />
+                    ) : (
+                      <UserIcon className="text-gray-300" size={32} />
+                    )}
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute bottom-0 right-0 p-1.5 bg-indigo-600 text-white rounded-full shadow-md"
+                  >
+                    <Camera size={14} />
+                  </button>
+                </div>
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Profile Photo (Optional)</span>
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
+              </div>
+
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Full Name</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 text-gray-400" size={18} />
+                  <UserIcon className="absolute left-3 top-3 text-gray-400" size={18} />
                   <input required className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-gray-200 rounded-xl outline-none text-sm" placeholder="John Doe" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
                 </div>
               </div>
+
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Username</label>
                 <div className="relative">
@@ -143,6 +185,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees, onAd
                   <input required className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-gray-200 rounded-xl outline-none text-sm" placeholder="jdoe" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} />
                 </div>
               </div>
+
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Password</label>
                 <div className="relative">
@@ -150,6 +193,31 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees, onAd
                   <input required type="password" className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-gray-200 rounded-xl outline-none text-sm" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
                 </div>
               </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Account Role</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button 
+                    type="button"
+                    onClick={() => setFormData({...formData, role: UserRole.EMPLOYEE})}
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 transition-all text-xs font-bold ${
+                      formData.role === UserRole.EMPLOYEE ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-gray-100 text-gray-400'
+                    }`}
+                  >
+                    <UserIcon size={14} /> Employee
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setFormData({...formData, role: UserRole.ADMIN})}
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 transition-all text-xs font-bold ${
+                      formData.role === UserRole.ADMIN ? 'border-purple-600 bg-purple-50 text-purple-700' : 'border-gray-100 text-gray-400'
+                    }`}
+                  >
+                    <Shield size={14} /> Admin
+                  </button>
+                </div>
+              </div>
+
               <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all shadow-lg mt-4">
                 Create Account
               </button>

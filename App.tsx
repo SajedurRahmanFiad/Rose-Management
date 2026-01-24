@@ -1,35 +1,40 @@
 
 import React, { useState, useEffect } from 'react';
-import { Company, UserRole, User, Order, OrderStatus } from './types';
+import { Company, UserRole, User, Order, OrderStatus, Product } from './types';
 import Layout from './components/Layout';
 import OrdersView from './components/OrdersView';
 import AdminDashboard from './components/AdminDashboard';
 import EmployeeManagement from './components/EmployeeManagement';
 import ProfileView from './components/ProfileView';
+import ProductsView from './components/ProductsView';
 import Login from './components/Login';
 import { parseOrderText } from './services/geminiService';
 import { Building2, Plus, X, Loader2, Sparkles } from 'lucide-react';
 
 const INITIAL_EMPLOYEES: User[] = [
-  { id: '1', name: 'Admin Root', username: 'admin', role: UserRole.ADMIN, password: 'admin', company: Company.RESEVALLEY },
-  { id: '2', name: 'Sarah Miller', username: 'sarah_m', role: UserRole.EMPLOYEE, password: 'password', company: Company.RESEVALLEY },
-  { id: '3', name: 'Mike Johnson', username: 'mike_j', role: UserRole.EMPLOYEE, password: 'password', company: Company.ROSEWORLD },
-  { id: '4', name: 'Rose Admin', username: 'admin', role: UserRole.ADMIN, password: 'admin', company: Company.ROSEWORLD },
+  { id: '1', name: 'Resevalley Admin', username: 'admin', role: UserRole.ADMIN, password: 'admin', company: Company.RESEVALLEY },
+  { id: '2', name: 'Roseworld Admin', username: 'admin', role: UserRole.ADMIN, password: 'admin', company: Company.ROSEWORLD },
+  { id: '3', name: 'Sarah Miller', username: 'sarah_m', role: UserRole.EMPLOYEE, password: 'password', company: Company.RESEVALLEY },
+  { id: '4', name: 'Mike Johnson', username: 'mike_j', role: UserRole.EMPLOYEE, password: 'password', company: Company.ROSEWORLD },
+];
+
+const INITIAL_PRODUCTS: Product[] = [
+  { id: 'p1', company: Company.RESEVALLEY, name: 'Executive Desk', category: 'Furniture', salePrice: 450, purchasePrice: 220, description: 'High-quality mahogany desk.' },
+  { id: 'p2', company: Company.ROSEWORLD, name: 'Velvet Roses (Dozen)', category: 'Floral', salePrice: 65, purchasePrice: 18, description: 'Deep red premium roses.' },
 ];
 
 const App: React.FC = () => {
   const [company, setCompany] = useState<Company | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'orders' | 'dashboard' | 'employees' | 'profile'>('orders');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'orders' | 'employees' | 'profile'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
   const [employees, setEmployees] = useState<User[]>(INITIAL_EMPLOYEES);
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   
-  // Filtering states
   const [dateFilter, setDateFilter] = useState('all');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   
-  // Modal states
   const [showAddOrderModal, setShowAddOrderModal] = useState(false);
   const [orderText, setOrderText] = useState('');
   const [isParsing, setIsParsing] = useState(false);
@@ -41,11 +46,15 @@ const App: React.FC = () => {
     const savedEmployees = localStorage.getItem('employees_data');
     if (savedEmployees) setEmployees(JSON.parse(savedEmployees));
 
+    const savedProducts = localStorage.getItem('products_data');
+    if (savedProducts) setProducts(JSON.parse(savedProducts));
+
     const savedUser = localStorage.getItem('current_user');
     if (savedUser) {
       const user = JSON.parse(savedUser);
       setCurrentUser(user);
       setCompany(user.company);
+      setActiveTab(user.role === UserRole.ADMIN ? 'dashboard' : 'products');
     }
   }, []);
 
@@ -55,7 +64,6 @@ const App: React.FC = () => {
 
   useEffect(() => {
     localStorage.setItem('employees_data', JSON.stringify(employees));
-    // Sync current user session if their data in the list changes
     if (currentUser) {
       const updatedMe = employees.find(e => e.id === currentUser.id);
       if (updatedMe && (updatedMe.name !== currentUser.name || updatedMe.profilePicture !== currentUser.profilePicture)) {
@@ -65,10 +73,15 @@ const App: React.FC = () => {
     }
   }, [employees, currentUser]);
 
+  useEffect(() => {
+    localStorage.setItem('products_data', JSON.stringify(products));
+  }, [products]);
+
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     setCompany(user.company);
     localStorage.setItem('current_user', JSON.stringify(user));
+    setActiveTab(user.role === UserRole.ADMIN ? 'dashboard' : 'products');
   };
 
   const handleLogout = () => {
@@ -88,10 +101,8 @@ const App: React.FC = () => {
 
   const handleAddOrder = async () => {
     if (!orderText.trim() || !currentUser) return;
-    
     setIsParsing(true);
     const parsed = await parseOrderText(orderText);
-    
     const formattedContent = parsed && parsed.name 
       ? `<b>Name: </b> ${parsed.name}\n<b>Phone:</b> ${parsed.phone}\n<b>Address:</b> ${parsed.address}`
       : orderText;
@@ -105,7 +116,6 @@ const App: React.FC = () => {
       creatorName: currentUser.name,
       createdAt: Date.now(),
     };
-
     setOrders([newOrder, ...orders]);
     setOrderText('');
     setShowAddOrderModal(false);
@@ -118,6 +128,24 @@ const App: React.FC = () => {
 
   const handleDeleteOrder = (id: string) => {
     setOrders(orders.filter(o => o.id !== id));
+  };
+
+  const handleAddProduct = (productData: Partial<Product>) => {
+    const newProduct: Product = {
+      id: Math.random().toString(36).substr(2, 9),
+      company: company!,
+      name: productData.name || 'New Product',
+      category: productData.category || 'General',
+      salePrice: productData.salePrice || 0,
+      purchasePrice: productData.purchasePrice || 0,
+      image: productData.image,
+      description: productData.description,
+    };
+    setProducts([...products, newProduct]);
+  };
+
+  const handleDeleteProduct = (id: string) => {
+    setProducts(products.filter(p => p.id !== id));
   };
 
   const handleAddEmployee = (empData: Partial<User>) => {
@@ -134,7 +162,7 @@ const App: React.FC = () => {
   };
 
   const handleDeleteEmployee = (id: string) => {
-    if (currentUser && currentUser.id === id) {
+    if (currentUser?.id === id) {
       alert("You cannot delete yourself.");
       return;
     }
@@ -144,7 +172,6 @@ const App: React.FC = () => {
   const getFilteredOrders = () => {
     let filtered = orders.filter(o => o.company === company);
     const now = new Date();
-
     if (dateFilter === 'today') {
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
       filtered = filtered.filter(o => o.createdAt >= todayStart);
@@ -162,11 +189,11 @@ const App: React.FC = () => {
       const end = new Date(customEndDate).setHours(23, 59, 59, 999);
       filtered = filtered.filter(o => o.createdAt >= start && o.createdAt <= end);
     }
-    
     return filtered;
   };
 
   const activeOrders = getFilteredOrders();
+  const activeProducts = products.filter(p => p.company === company);
 
   if (!company) {
     return (
@@ -180,20 +207,9 @@ const App: React.FC = () => {
               Select your organization to get started.
             </p>
           </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-8 px-4">
-            <CompanyButton 
-              name={Company.RESEVALLEY} 
-              color="indigo" 
-              desc="Premium Estate Solutions" 
-              onClick={() => setCompany(Company.RESEVALLEY)} 
-            />
-            <CompanyButton 
-              name={Company.ROSEWORLD} 
-              color="rose" 
-              desc="Global Floral Logistics" 
-              onClick={() => setCompany(Company.ROSEWORLD)} 
-            />
+            <CompanyButton name={Company.RESEVALLEY} color="indigo" desc="Premium Estate Solutions" onClick={() => setCompany(Company.RESEVALLEY)} />
+            <CompanyButton name={Company.ROSEWORLD} color="rose" desc="Global Floral Logistics" onClick={() => setCompany(Company.ROSEWORLD)} />
           </div>
         </div>
       </div>
@@ -202,67 +218,26 @@ const App: React.FC = () => {
 
   if (!currentUser) {
     return (
-      <Login 
-        company={company} 
-        employees={employees} 
-        onLogin={handleLogin} 
-        onBack={() => setCompany(null)} 
-      />
+      <Login company={company} employees={employees} onLogin={handleLogin} onBack={() => setCompany(null)} />
     );
   }
 
   return (
-    <Layout 
-      company={company} 
-      role={currentUser.role} 
-      activeTab={activeTab as any}
-      setActiveTab={setActiveTab as any}
-      onLogout={handleLogout}
-      user={currentUser}
-    >
-      {activeTab === 'orders' && (
-        <OrdersView 
-          orders={activeOrders}
-          role={currentUser.role}
-          onAddOrder={() => setShowAddOrderModal(true)}
-          onUpdateStatus={handleUpdateStatus}
-          onDeleteOrder={handleDeleteOrder}
-          currentUserId={currentUser.id}
-          dateFilter={dateFilter}
-          onDateFilterChange={setDateFilter}
-          customStartDate={customStartDate}
-          onCustomStartDateChange={setCustomStartDate}
-          customEndDate={customEndDate}
-          onCustomEndDateChange={setCustomEndDate}
-        />
-      )}
-
+    <Layout company={company} role={currentUser.role} activeTab={activeTab} setActiveTab={setActiveTab} onLogout={handleLogout} user={currentUser}>
       {activeTab === 'dashboard' && currentUser.role === UserRole.ADMIN && (
-        <AdminDashboard 
-          orders={activeOrders}
-          employees={employees.filter(e => e.company === company)}
-          dateFilter={dateFilter}
-          onDateFilterChange={setDateFilter}
-          customStartDate={customStartDate}
-          onCustomStartDateChange={setCustomStartDate}
-          customEndDate={customEndDate}
-          onCustomEndDateChange={setCustomEndDate}
-        />
+        <AdminDashboard orders={activeOrders} employees={employees.filter(e => e.company === company)} dateFilter={dateFilter} onDateFilterChange={setDateFilter} customStartDate={customStartDate} onCustomStartDateChange={setCustomStartDate} customEndDate={customEndDate} onCustomEndDateChange={setCustomEndDate} />
       )}
-
+      {activeTab === 'products' && (
+        <ProductsView products={activeProducts} role={currentUser.role} onAddProduct={handleAddProduct} onDeleteProduct={handleDeleteProduct} />
+      )}
+      {activeTab === 'orders' && (
+        <OrdersView orders={activeOrders} role={currentUser.role} onAddOrder={() => setShowAddOrderModal(true)} onUpdateStatus={handleUpdateStatus} onDeleteOrder={handleDeleteOrder} currentUserId={currentUser.id} dateFilter={dateFilter} onDateFilterChange={setDateFilter} customStartDate={customStartDate} onCustomStartDateChange={setCustomStartDate} customEndDate={customEndDate} onCustomEndDateChange={setCustomEndDate} />
+      )}
       {activeTab === 'employees' && currentUser.role === UserRole.ADMIN && (
-        <EmployeeManagement 
-          employees={employees.filter(e => e.company === company)}
-          onAddEmployee={handleAddEmployee}
-          onDeleteEmployee={handleDeleteEmployee}
-        />
+        <EmployeeManagement employees={employees.filter(e => e.company === company)} onAddEmployee={handleAddEmployee} onDeleteEmployee={handleDeleteEmployee} />
       )}
-
       {activeTab === 'profile' && (
-        <ProfileView 
-          user={currentUser} 
-          onUpdate={handleUpdateProfile} 
-        />
+        <ProfileView user={currentUser} onUpdate={handleUpdateProfile} />
       )}
 
       {showAddOrderModal && (
@@ -277,7 +252,6 @@ const App: React.FC = () => {
                 <X size={24} className="text-gray-400" />
               </button>
             </div>
-            
             <div className="p-5 lg:p-8 space-y-6">
               <div className="relative">
                 <textarea 
@@ -291,20 +265,9 @@ const App: React.FC = () => {
                   <Sparkles size={10} /> AI Assisted
                 </div>
               </div>
-
               <div className="flex flex-col sm:flex-row gap-3">
-                <button 
-                  onClick={() => setShowAddOrderModal(false)}
-                  className="w-full py-4 bg-gray-100 text-gray-700 rounded-2xl font-bold order-2 sm:order-1 transition-all hover:bg-gray-200"
-                  disabled={isParsing}
-                >
-                  Discard
-                </button>
-                <button 
-                  onClick={handleAddOrder}
-                  disabled={isParsing || !orderText.trim()}
-                  className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-xl shadow-indigo-100 flex items-center justify-center gap-2 order-1 sm:order-2 disabled:opacity-50 transition-all hover:bg-indigo-700"
-                >
+                <button onClick={() => setShowAddOrderModal(false)} className="w-full py-4 bg-gray-100 text-gray-700 rounded-2xl font-bold order-2 sm:order-1 transition-all hover:bg-gray-200" disabled={isParsing}>Discard</button>
+                <button onClick={handleAddOrder} disabled={isParsing || !orderText.trim()} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-xl shadow-indigo-100 flex items-center justify-center gap-2 order-1 sm:order-2 disabled:opacity-50 transition-all hover:bg-indigo-700">
                   {isParsing ? <Loader2 className="animate-spin" size={20} /> : <Plus size={20} />}
                   {isParsing ? 'Processing AI...' : 'Add Order'}
                 </button>
@@ -318,18 +281,11 @@ const App: React.FC = () => {
 };
 
 const CompanyButton: React.FC<{ name: string, color: string, desc: string, onClick: () => void }> = ({ name, color, desc, onClick }) => (
-  <button 
-    onClick={onClick}
-    className="group relative bg-white p-6 lg:p-8 rounded-3xl shadow-md lg:shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border-2 border-transparent hover:border-indigo-200 overflow-hidden text-center"
-  >
-    <div className={`w-14 h-14 lg:w-20 lg:h-20 ${color === 'rose' ? 'bg-rose-100 text-rose-600' : 'bg-indigo-100 text-indigo-600'} rounded-2xl flex items-center justify-center mx-auto mb-4`}>
-      <Building2 size={32} />
-    </div>
+  <button onClick={onClick} className="group relative bg-white p-6 lg:p-8 rounded-3xl shadow-md lg:shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border-2 border-transparent hover:border-indigo-200 overflow-hidden text-center">
+    <div className={`w-14 h-14 lg:w-20 lg:h-20 ${color === 'rose' ? 'bg-rose-100 text-rose-600' : 'bg-indigo-100 text-indigo-600'} rounded-2xl flex items-center justify-center mx-auto mb-4`}><Building2 size={32} /></div>
     <h2 className="text-lg lg:text-2xl font-bold text-slate-900">{name}</h2>
     <p className="text-[10px] lg:text-sm text-slate-400 mt-1">{desc}</p>
-    <div className={`mt-4 w-full py-2 ${color === 'rose' ? 'bg-rose-600' : 'bg-indigo-600'} text-white rounded-full text-xs font-black shadow-lg opacity-0 lg:group-hover:opacity-100 transition-opacity`}>
-      Enter Organization
-    </div>
+    <div className={`mt-4 w-full py-2 ${color === 'rose' ? 'bg-rose-600' : 'bg-indigo-600'} text-white rounded-full text-xs font-black shadow-lg opacity-0 lg:group-hover:opacity-100 transition-opacity`}>Enter Organization</div>
   </button>
 );
 

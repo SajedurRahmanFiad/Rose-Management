@@ -35,3 +35,14 @@ export interface Order {
   creatorName: string;
   createdAt: number;
 }
+
+export interface Product {
+  id: string;
+  company: Company;
+  name: string;
+  category: string;
+  salePrice: number;
+  purchasePrice: number;
+  image?: string;
+  description?: string;
+}

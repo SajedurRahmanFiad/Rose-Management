@@ -45,18 +45,12 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees, onAd
           <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Employees</h2>
           <p className="text-xs lg:text-sm text-gray-500 mt-0.5">Manage employee accounts and access control.</p>
         </div>
-        
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-indigo-100 w-full sm:w-auto text-sm lg:text-base"
-        >
-          <UserPlus size={20} />
-          Add Employee
+        <button onClick={() => setShowAddModal(true)} className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl font-semibold transition-all shadow-lg w-full sm:w-auto text-sm">
+          <UserPlus size={20} /> Add Employee
         </button>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* Desktop Table */}
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider font-semibold">
@@ -74,7 +68,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees, onAd
                       {emp.profilePicture ? (
                         <img src={emp.profilePicture} className="w-8 h-8 rounded-full object-cover border border-gray-200" alt={emp.name} />
                       ) : (
-                        <div className="w-8 h-8 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold text-xs uppercase">
+                        <div className="w-8 h-8 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold text-[10px]">
                           {emp.name.split(' ').map(n => n[0]).join('')}
                         </div>
                       )}
@@ -89,11 +83,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees, onAd
                        }`}>
                         {emp.role}
                        </span>
-                       <button 
-                        onClick={() => onDeleteEmployee(emp.id)}
-                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                        title="Delete Account"
-                       >
+                       <button onClick={() => onDeleteEmployee(emp.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete Account">
                          <Trash2 size={18} />
                        </button>
                     </div>
@@ -104,7 +94,6 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees, onAd
           </table>
         </div>
 
-        {/* Mobile View */}
         <div className="lg:hidden divide-y divide-gray-100">
           {employees.map((emp) => (
             <div key={emp.id} className="p-4 flex items-center justify-between">
@@ -116,111 +105,55 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees, onAd
                     {emp.name.split(' ').map(n => n[0]).join('')}
                   </div>
                 )}
-                <div>
-                  <p className="text-sm font-bold text-gray-900 leading-tight">{emp.name}</p>
-                  <p className="text-xs text-gray-500">@{emp.username}</p>
-                </div>
+                <div><p className="text-sm font-bold text-gray-900">{emp.name}</p><p className="text-xs text-gray-500">@{emp.username}</p></div>
               </div>
               <div className="flex flex-row items-center gap-3">
-                <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                  emp.role === UserRole.ADMIN ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-                }`}>
-                  {emp.role}
-                </span>
-                <button onClick={() => onDeleteEmployee(emp.id)} className="text-red-400 p-1">
-                  <Trash2 size={18} />
-                </button>
+                <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${emp.role === UserRole.ADMIN ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>{emp.role}</span>
+                <button onClick={() => onDeleteEmployee(emp.id)} className="text-red-400 p-1"><Trash2 size={18} /></button>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Add Employee Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-slideUp">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h3 className="text-lg font-bold text-gray-900">Add New User</h3>
-              <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <X size={20} />
-              </button>
+              <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={20} /></button>
             </div>
-            
             <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-              {/* Profile Pic Preview & Selector */}
               <div className="flex flex-col items-center gap-2 mb-4">
                 <div className="relative">
                   <div className="w-20 h-20 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden">
-                    {formData.profilePicture ? (
-                      <img src={formData.profilePicture} className="w-full h-full object-cover" alt="Preview" />
-                    ) : (
-                      <UserIcon className="text-gray-300" size={32} />
-                    )}
+                    {formData.profilePicture ? (<img src={formData.profilePicture} className="w-full h-full object-cover" alt="Preview" />) : (<UserIcon className="text-gray-300" size={32} />)}
                   </div>
-                  <button 
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-0 right-0 p-1.5 bg-indigo-600 text-white rounded-full shadow-md"
-                  >
-                    <Camera size={14} />
-                  </button>
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute bottom-0 right-0 p-1.5 bg-indigo-600 text-white rounded-full shadow-md"><Camera size={14} /></button>
                 </div>
                 <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Profile Photo (Optional)</span>
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
               </div>
-
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Full Name</label>
-                <div className="relative">
-                  <UserIcon className="absolute left-3 top-3 text-gray-400" size={18} />
-                  <input required className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-gray-200 rounded-xl outline-none text-sm" placeholder="John Doe" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-                </div>
+                <input required className="w-full px-4 py-2.5 bg-gray-50 border-gray-200 rounded-xl text-sm" placeholder="John Doe" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
               </div>
-
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Username</label>
-                <div className="relative">
-                  <Users className="absolute left-3 top-3 text-gray-400" size={18} />
-                  <input required className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-gray-200 rounded-xl outline-none text-sm" placeholder="jdoe" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} />
-                </div>
+                <input required className="w-full px-4 py-2.5 bg-gray-50 border-gray-200 rounded-xl text-sm" placeholder="jdoe" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} />
               </div>
-
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Password</label>
-                <div className="relative">
-                  <Key className="absolute left-3 top-3 text-gray-400" size={18} />
-                  <input required type="password" className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-gray-200 rounded-xl outline-none text-sm" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
-                </div>
+                <input required type="password" className="w-full px-4 py-2.5 bg-gray-50 border-gray-200 rounded-xl text-sm" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
               </div>
-
               <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Account Role</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Role</label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button 
-                    type="button"
-                    onClick={() => setFormData({...formData, role: UserRole.EMPLOYEE})}
-                    className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 transition-all text-xs font-bold ${
-                      formData.role === UserRole.EMPLOYEE ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-gray-100 text-gray-400'
-                    }`}
-                  >
-                    <UserIcon size={14} /> Employee
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => setFormData({...formData, role: UserRole.ADMIN})}
-                    className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 transition-all text-xs font-bold ${
-                      formData.role === UserRole.ADMIN ? 'border-purple-600 bg-purple-50 text-purple-700' : 'border-gray-100 text-gray-400'
-                    }`}
-                  >
-                    <Shield size={14} /> Admin
-                  </button>
+                  <button type="button" onClick={() => setFormData({...formData, role: UserRole.EMPLOYEE})} className={`py-2.5 rounded-xl border-2 text-xs font-bold ${formData.role === UserRole.EMPLOYEE ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-gray-100 text-gray-400'}`}>Employee</button>
+                  <button type="button" onClick={() => setFormData({...formData, role: UserRole.ADMIN})} className={`py-2.5 rounded-xl border-2 text-xs font-bold ${formData.role === UserRole.ADMIN ? 'border-purple-600 bg-purple-50 text-purple-700' : 'border-gray-100 text-gray-400'}`}>Admin</button>
                 </div>
               </div>
-
-              <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all shadow-lg mt-4">
-                Create Account
-              </button>
+              <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all shadow-lg mt-4">Create Account</button>
             </form>
           </div>
         </div>

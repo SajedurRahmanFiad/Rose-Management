@@ -5,19 +5,21 @@ import Layout from './components/Layout';
 import OrdersView from './components/OrdersView';
 import AdminDashboard from './components/AdminDashboard';
 import EmployeeManagement from './components/EmployeeManagement';
+import ProfileView from './components/ProfileView';
+import Login from './components/Login';
 import { parseOrderText } from './services/geminiService';
 import { Building2, Plus, X, Loader2, Sparkles } from 'lucide-react';
 
 const INITIAL_EMPLOYEES: User[] = [
-  { id: '1', name: 'Admin Root', username: 'admin', role: UserRole.ADMIN },
-  { id: '2', name: 'Sarah Miller', username: 'sarah_m', role: UserRole.EMPLOYEE },
-  { id: '3', name: 'Mike Johnson', username: 'mike_j', role: UserRole.EMPLOYEE },
+  { id: '1', name: 'Admin Root', username: 'admin', role: UserRole.ADMIN, password: 'password', company: Company.RESEVALLEY },
+  { id: '2', name: 'Sarah Miller', username: 'sarah_m', role: UserRole.EMPLOYEE, password: 'password', company: Company.RESEVALLEY },
+  { id: '3', name: 'Mike Johnson', username: 'mike_j', role: UserRole.EMPLOYEE, password: 'password', company: Company.ROSEWORLD },
 ];
 
 const App: React.FC = () => {
   const [company, setCompany] = useState<Company | null>(null);
-  const [role, setRole] = useState<UserRole>(UserRole.ADMIN);
-  const [activeTab, setActiveTab] = useState<'orders' | 'dashboard' | 'employees'>('orders');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [activeTab, setActiveTab] = useState<'orders' | 'dashboard' | 'employees' | 'profile'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
   const [employees, setEmployees] = useState<User[]>(INITIAL_EMPLOYEES);
   
@@ -31,17 +33,19 @@ const App: React.FC = () => {
   const [orderText, setOrderText] = useState('');
   const [isParsing, setIsParsing] = useState(false);
 
-  // User logic
-  const currentUser = role === UserRole.ADMIN 
-    ? (employees.find(e => e.role === UserRole.ADMIN) || employees[0])
-    : (employees.find(e => e.role === UserRole.EMPLOYEE) || employees[0]);
-
   useEffect(() => {
     const savedOrders = localStorage.getItem('orders_data');
     if (savedOrders) setOrders(JSON.parse(savedOrders));
     
     const savedEmployees = localStorage.getItem('employees_data');
     if (savedEmployees) setEmployees(JSON.parse(savedEmployees));
+
+    const savedUser = localStorage.getItem('current_user');
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      setCurrentUser(user);
+      setCompany(user.company);
+    }
   }, []);
 
   useEffect(() => {
@@ -50,15 +54,43 @@ const App: React.FC = () => {
 
   useEffect(() => {
     localStorage.setItem('employees_data', JSON.stringify(employees));
+    // If current user is in the list, update their local session too
+    if (currentUser) {
+      const updatedMe = employees.find(e => e.id === currentUser.id);
+      if (updatedMe) {
+        setCurrentUser(updatedMe);
+        localStorage.setItem('current_user', JSON.stringify(updatedMe));
+      }
+    }
   }, [employees]);
 
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
+    setCompany(user.company);
+    localStorage.setItem('current_user', JSON.stringify(user));
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setCompany(null);
+    localStorage.removeItem('current_user');
+    setActiveTab('orders');
+  };
+
+  const handleUpdateProfile = (name: string, profilePicture: string) => {
+    if (!currentUser) return;
+    const updatedEmployees = employees.map(e => 
+      e.id === currentUser.id ? { ...e, name, profilePicture } : e
+    );
+    setEmployees(updatedEmployees);
+  };
+
   const handleAddOrder = async () => {
-    if (!orderText.trim()) return;
+    if (!orderText.trim() || !currentUser) return;
     
     setIsParsing(true);
     const parsed = await parseOrderText(orderText);
     
-    // Exact formatting as requested: labels and bold tags
     const formattedContent = parsed && parsed.name 
       ? `<b>Name: </b> ${parsed.name}\n<b>Phone:</b> ${parsed.phone}\n<b>Address:</b> ${parsed.address}`
       : orderText;
@@ -93,17 +125,14 @@ const App: React.FC = () => {
       name: empData.name || 'Unknown',
       username: empData.username || 'user',
       role: UserRole.EMPLOYEE,
-      password: empData.password,
+      password: empData.password || 'password',
+      company: company!,
     };
     setEmployees([...employees, newEmp]);
   };
 
   const handleDeleteEmployee = (id: string) => {
-    if (employees.length <= 1) return;
     setEmployees(employees.filter(e => e.id !== id));
-    if (role === UserRole.EMPLOYEE && !employees.find(e => e.id !== id && e.role === UserRole.EMPLOYEE)) {
-       setRole(UserRole.ADMIN);
-    }
   };
 
   const getFilteredOrders = () => {
@@ -142,7 +171,7 @@ const App: React.FC = () => {
               Order<span className="text-indigo-600">Sync</span> Pro
             </h1>
             <p className="text-sm lg:text-lg text-slate-500 max-w-lg mx-auto leading-relaxed px-4">
-              Select your organization to manage orders, analytics, and team collaboration.
+              Select your organization to get started.
             </p>
           </div>
 
@@ -160,29 +189,35 @@ const App: React.FC = () => {
               onClick={() => setCompany(Company.ROSEWORLD)} 
             />
           </div>
-          
-          <div className="text-center text-slate-400 text-[10px] font-bold uppercase tracking-[0.25em]">
-            Enterprise Standard • 2024
-          </div>
         </div>
       </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <Login 
+        company={company} 
+        employees={employees} 
+        onLogin={handleLogin} 
+        onBack={() => setCompany(null)} 
+      />
     );
   }
 
   return (
     <Layout 
       company={company} 
-      role={role} 
-      onRoleSwitch={setRole}
-      activeTab={activeTab}
-      setActiveTab={setActiveTab}
-      onExitCompany={() => setCompany(null)}
-      userName={currentUser.name}
+      role={currentUser.role} 
+      activeTab={activeTab as any}
+      setActiveTab={setActiveTab as any}
+      onLogout={handleLogout}
+      user={currentUser}
     >
       {activeTab === 'orders' && (
         <OrdersView 
           orders={activeOrders}
-          role={role}
+          role={currentUser.role}
           onAddOrder={() => setShowAddOrderModal(true)}
           onUpdateStatus={handleUpdateStatus}
           onDeleteOrder={handleDeleteOrder}
@@ -196,10 +231,10 @@ const App: React.FC = () => {
         />
       )}
 
-      {activeTab === 'dashboard' && role === UserRole.ADMIN && (
+      {activeTab === 'dashboard' && currentUser.role === UserRole.ADMIN && (
         <AdminDashboard 
           orders={activeOrders}
-          employees={employees}
+          employees={employees.filter(e => e.company === company)}
           dateFilter={dateFilter}
           onDateFilterChange={setDateFilter}
           customStartDate={customStartDate}
@@ -209,15 +244,21 @@ const App: React.FC = () => {
         />
       )}
 
-      {activeTab === 'employees' && role === UserRole.ADMIN && (
+      {activeTab === 'employees' && currentUser.role === UserRole.ADMIN && (
         <EmployeeManagement 
-          employees={employees}
+          employees={employees.filter(e => e.company === company)}
           onAddEmployee={handleAddEmployee}
           onDeleteEmployee={handleDeleteEmployee}
         />
       )}
 
-      {/* Add Order Modal */}
+      {activeTab === 'profile' && (
+        <ProfileView 
+          user={currentUser} 
+          onUpdate={handleUpdateProfile} 
+        />
+      )}
+
       {showAddOrderModal && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white w-full max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-slideUp">
@@ -281,7 +322,7 @@ const CompanyButton: React.FC<{ name: string, color: string, desc: string, onCli
     <h2 className="text-lg lg:text-2xl font-bold text-slate-900">{name}</h2>
     <p className="text-[10px] lg:text-sm text-slate-400 mt-1">{desc}</p>
     <div className={`mt-4 w-full py-2 ${color === 'rose' ? 'bg-rose-600' : 'bg-indigo-600'} text-white rounded-full text-xs font-black shadow-lg opacity-0 lg:group-hover:opacity-100 transition-opacity`}>
-      Launch Workspace
+      Enter Organization
     </div>
   </button>
 );

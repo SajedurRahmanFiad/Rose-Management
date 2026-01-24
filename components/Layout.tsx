@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { UserRole, Company } from '../types';
+import { UserRole, Company, User } from '../types';
 import { 
   LayoutDashboard, 
   ClipboardList, 
@@ -11,36 +11,38 @@ import {
   ShieldCheck, 
   UserCircle, 
   Menu, 
-  X 
+  X,
+  User as UserIcon,
+  Settings
 } from 'lucide-react';
 
 interface LayoutProps {
   company: Company;
   role: UserRole;
-  onRoleSwitch: (role: UserRole) => void;
-  activeTab: 'orders' | 'dashboard' | 'employees';
-  setActiveTab: (tab: 'orders' | 'dashboard' | 'employees') => void;
-  onExitCompany: () => void;
-  userName: string;
+  activeTab: 'orders' | 'dashboard' | 'employees' | 'profile';
+  setActiveTab: (tab: 'orders' | 'dashboard' | 'employees' | 'profile') => void;
+  onLogout: () => void;
+  user: User;
   children: React.ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = ({ 
   company, 
   role, 
-  onRoleSwitch, 
   activeTab, 
   setActiveTab, 
-  onExitCompany, 
-  userName, 
+  onLogout, 
+  user, 
   children 
 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const navItems = [
     { id: 'orders', label: 'Orders', icon: ClipboardList, roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
     { id: 'dashboard', label: 'Analytics', icon: LayoutDashboard, roles: [UserRole.ADMIN] },
     { id: 'employees', label: 'Employees', icon: Users, roles: [UserRole.ADMIN] },
+    { id: 'profile', label: 'Profile', icon: UserIcon, roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
   ];
 
   const filteredNavItems = navItems.filter(item => item.roles.includes(role));
@@ -86,11 +88,11 @@ const Layout: React.FC<LayoutProps> = ({
 
       <div className="p-4 border-t border-gray-100">
         <button 
-          onClick={onExitCompany}
+          onClick={onLogout}
           className="w-full flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all"
         >
           <LogOut size={20} />
-          <span>Switch Company</span>
+          <span>Sign Out</span>
         </button>
       </div>
     </div>
@@ -130,32 +132,47 @@ const Layout: React.FC<LayoutProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 lg:gap-4">
-            {/* Debug Role Switch */}
-            <div className="flex bg-gray-100 p-0.5 lg:p-1 rounded-lg">
-              <button 
-                onClick={() => onRoleSwitch(UserRole.ADMIN)}
-                className={`px-2 lg:px-3 py-1 rounded-md text-[10px] lg:text-xs font-semibold transition-all ${role === UserRole.ADMIN ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500'}`}
-              >
-                Admin
-              </button>
-              <button 
-                onClick={() => onRoleSwitch(UserRole.EMPLOYEE)}
-                className={`px-2 lg:px-3 py-1 rounded-md text-[10px] lg:text-xs font-semibold transition-all ${role === UserRole.EMPLOYEE ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500'}`}
-              >
-                Employee
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2 lg:gap-3 pl-2 lg:pl-4 border-l border-gray-200">
+          <div className="relative">
+            <button 
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              className="flex items-center gap-2 lg:gap-3 hover:bg-gray-50 p-1.5 rounded-xl transition-all"
+            >
               <div className="hidden sm:block text-right">
-                <p className="text-sm font-semibold text-gray-900 truncate max-w-[100px]">{userName}</p>
+                <p className="text-sm font-semibold text-gray-900 truncate max-w-[120px]">{user.name}</p>
                 <p className="text-[10px] text-gray-500 uppercase tracking-tighter">{role}</p>
               </div>
-              <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-gradient-to-tr from-indigo-100 to-indigo-200 flex items-center justify-center text-indigo-700">
-                {role === UserRole.ADMIN ? <ShieldCheck size={18} /> : <UserCircle size={18} />}
-              </div>
-            </div>
+              {user.profilePicture ? (
+                <img 
+                  src={user.profilePicture} 
+                  alt={user.name} 
+                  className="w-8 h-8 lg:w-10 lg:h-10 rounded-full object-cover border-2 border-indigo-100" 
+                />
+              ) : (
+                <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-gradient-to-tr from-indigo-100 to-indigo-200 flex items-center justify-center text-indigo-700">
+                  {role === UserRole.ADMIN ? <ShieldCheck size={18} /> : <UserCircle size={18} />}
+                </div>
+              )}
+            </button>
+
+            {isUserMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setIsUserMenuOpen(false)} />
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 z-20 py-2 animate-fadeIn">
+                  <button 
+                    onClick={() => { setActiveTab('profile'); setIsUserMenuOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    <UserIcon size={16} /> Profile Settings
+                  </button>
+                  <button 
+                    onClick={onLogout}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <LogOut size={16} /> Sign Out
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </header>
 

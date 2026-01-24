@@ -22,6 +22,8 @@ export interface User {
   username: string;
   role: UserRole;
   password?: string;
+  company: Company;
+  profilePicture?: string; // base64 or URL
 }
 
 export interface Order {

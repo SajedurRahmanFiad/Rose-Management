@@ -13,14 +13,14 @@ import {
   Menu, 
   X,
   User as UserIcon,
-  Package
+  Settings
 } from 'lucide-react';
 
 interface LayoutProps {
   company: Company;
   role: UserRole;
-  activeTab: 'dashboard' | 'products' | 'orders' | 'employees' | 'profile';
-  setActiveTab: (tab: 'dashboard' | 'products' | 'orders' | 'employees' | 'profile') => void;
+  activeTab: 'orders' | 'dashboard' | 'employees' | 'profile';
+  setActiveTab: (tab: 'orders' | 'dashboard' | 'employees' | 'profile') => void;
   onLogout: () => void;
   user: User;
   children: React.ReactNode;
@@ -39,9 +39,8 @@ const Layout: React.FC<LayoutProps> = ({
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const navItems = [
-    { id: 'dashboard', label: 'Analytics', icon: LayoutDashboard, roles: [UserRole.ADMIN] },
-    { id: 'products', label: 'Products', icon: Package, roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
     { id: 'orders', label: 'Orders', icon: ClipboardList, roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
+    { id: 'dashboard', label: 'Analytics', icon: LayoutDashboard, roles: [UserRole.ADMIN] },
     { id: 'employees', label: 'Employees', icon: Users, roles: [UserRole.ADMIN] },
     { id: 'profile', label: 'Profile', icon: UserIcon, roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
   ];
@@ -101,6 +100,7 @@ const Layout: React.FC<LayoutProps> = ({
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm"
@@ -108,6 +108,7 @@ const Layout: React.FC<LayoutProps> = ({
         />
       )}
 
+      {/* Sidebar - Desktop */}
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transition-transform duration-300 transform 
         lg:translate-x-0 lg:static lg:inset-0
@@ -116,7 +117,9 @@ const Layout: React.FC<LayoutProps> = ({
         <SidebarContent />
       </aside>
 
+      {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden w-full">
+        {/* Header */}
         <header className="h-16 bg-white border-b border-gray-200 px-4 lg:px-8 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <button onClick={toggleSidebar} className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg">
@@ -139,7 +142,11 @@ const Layout: React.FC<LayoutProps> = ({
                 <p className="text-[10px] text-gray-500 uppercase tracking-tighter">{role}</p>
               </div>
               {user.profilePicture ? (
-                <img src={user.profilePicture} alt={user.name} className="w-8 h-8 lg:w-10 lg:h-10 rounded-full object-cover border-2 border-indigo-100" />
+                <img 
+                  src={user.profilePicture} 
+                  alt={user.name} 
+                  className="w-8 h-8 lg:w-10 lg:h-10 rounded-full object-cover border-2 border-indigo-100" 
+                />
               ) : (
                 <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-gradient-to-tr from-indigo-100 to-indigo-200 flex items-center justify-center text-indigo-700">
                   {role === UserRole.ADMIN ? <ShieldCheck size={18} /> : <UserCircle size={18} />}
@@ -151,10 +158,16 @@ const Layout: React.FC<LayoutProps> = ({
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setIsUserMenuOpen(false)} />
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 z-20 py-2 animate-fadeIn">
-                  <button onClick={() => { setActiveTab('profile'); setIsUserMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                  <button 
+                    onClick={() => { setActiveTab('profile'); setIsUserMenuOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
                     <UserIcon size={16} /> Profile Settings
                   </button>
-                  <button onClick={onLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                  <button 
+                    onClick={onLogout}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
                     <LogOut size={16} /> Sign Out
                   </button>
                 </div>
@@ -163,8 +176,11 @@ const Layout: React.FC<LayoutProps> = ({
           </div>
         </header>
 
+        {/* Dynamic View */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-8">
-          <div className="max-w-7xl mx-auto">{children}</div>
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </div>
       </main>
     </div>

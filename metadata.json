@@ -1,0 +1,5 @@
+{
+  "name": "OrderSync Pro",
+  "description": "A comprehensive order management system for Resevalley and Roseworld, featuring role-based access control, smart order drafting, and administrative dashboards.",
+  "requestFramePermissions": []
+}

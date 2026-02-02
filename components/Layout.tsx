@@ -19,8 +19,8 @@ import {
 interface LayoutProps {
   company: Company;
   role: UserRole;
-  activeTab: 'orders' | 'dashboard' | 'employees' | 'profile';
-  setActiveTab: (tab: 'orders' | 'dashboard' | 'employees' | 'profile') => void;
+  activeTab: 'orders' | 'dashboard' | 'employees' | 'profile' | 'products';
+  setActiveTab: (tab: 'orders' | 'dashboard' | 'employees' | 'profile' | 'products') => void;
   onLogout: () => void;
   user: User;
   children: React.ReactNode;
@@ -40,6 +40,7 @@ const Layout: React.FC<LayoutProps> = ({
 
   const navItems = [
     { id: 'orders', label: 'Orders', icon: ClipboardList, roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
+    { id: 'products', label: 'Products', icon: Settings, roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
     { id: 'dashboard', label: 'Analytics', icon: LayoutDashboard, roles: [UserRole.ADMIN] },
     { id: 'employees', label: 'Employees', icon: Users, roles: [UserRole.ADMIN] },
     { id: 'profile', label: 'Profile', icon: UserIcon, roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
@@ -57,7 +58,7 @@ const Layout: React.FC<LayoutProps> = ({
             <Building2 size={24} />
           </div>
           <div>
-            <h1 className="font-bold text-gray-900 leading-tight">OrderSync</h1>
+            <h1 className="font-bold text-gray-900 leading-tight">Order Hub</h1>
             <p className="text-xs text-indigo-600 font-medium uppercase tracking-wider">{company}</p>
           </div>
         </div>
@@ -100,26 +101,22 @@ const Layout: React.FC<LayoutProps> = ({
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm"
+          className="fixed inset-0 bg-black/50 z-[150] lg:hidden backdrop-blur-sm"
           onClick={toggleSidebar}
         />
       )}
 
-      {/* Sidebar - Desktop */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transition-transform duration-300 transform 
+        fixed inset-y-0 left-0 z-[160] w-64 bg-white border-r border-gray-200 transition-transform duration-300 transform 
         lg:translate-x-0 lg:static lg:inset-0
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <SidebarContent />
       </aside>
 
-      {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden w-full">
-        {/* Header */}
         <header className="h-16 bg-white border-b border-gray-200 px-4 lg:px-8 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <button onClick={toggleSidebar} className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg">
@@ -156,8 +153,8 @@ const Layout: React.FC<LayoutProps> = ({
 
             {isUserMenuOpen && (
               <>
-                <div className="fixed inset-0 z-10" onClick={() => setIsUserMenuOpen(false)} />
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 z-20 py-2 animate-fadeIn">
+                <div className="fixed inset-0 z-[170]" onClick={() => setIsUserMenuOpen(false)} />
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 z-[180] py-2 animate-fadeIn">
                   <button 
                     onClick={() => { setActiveTab('profile'); setIsUserMenuOpen(false); }}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
@@ -176,7 +173,6 @@ const Layout: React.FC<LayoutProps> = ({
           </div>
         </header>
 
-        {/* Dynamic View */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-8">
           <div className="max-w-7xl mx-auto">
             {children}

@@ -19,19 +19,38 @@ export enum Company {
 export interface User {
   id: string;
   name: string;
-  username: string;
+  phone: string;
   role: UserRole;
   password?: string;
   company: Company;
-  profilePicture?: string; // base64 or URL
+  profilePicture?: string;
 }
 
 export interface Order {
   id: string;
   company: Company;
-  content: string; // The "note" containing customer info
+  content: string;
   status: OrderStatus;
-  createdBy: string; // User ID
+  createdBy: string;
   creatorName: string;
   createdAt: number;
+}
+
+export interface Product {
+  id: string;
+  company: Company;
+  name: string;
+  category: string;
+  salePrice: number;
+  purchasePrice: number;
+  image?: string;
+  description?: string;
+}
+
+export interface Store {
+  id: string;
+  name: string;
+  logo?: string;
+  description: string;
+  color: string;
 }

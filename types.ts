@@ -23,26 +23,15 @@ export interface User {
   role: UserRole;
   password?: string;
   company: Company;
-  profilePicture?: string;
+  profilePicture?: string; // base64 or URL
 }
 
 export interface Order {
   id: string;
   company: Company;
-  content: string;
+  content: string; // The "note" containing customer info
   status: OrderStatus;
-  createdBy: string;
+  createdBy: string; // User ID
   creatorName: string;
   createdAt: number;
-}
-
-export interface Product {
-  id: string;
-  company: Company;
-  name: string;
-  category: string;
-  salePrice: number;
-  purchasePrice: number;
-  image?: string;
-  description?: string;
 }

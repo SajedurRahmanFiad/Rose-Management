@@ -1,25 +1,28 @@
 
 import React, { useState, useEffect } from 'react';
-import { Company, UserRole, User, Order, OrderStatus, Product } from './types';
+import { Company, UserRole, User, Order, OrderStatus } from './types';
 import Layout from './components/Layout';
 import OrdersView from './components/OrdersView';
 import AdminDashboard from './components/AdminDashboard';
 import EmployeeManagement from './components/EmployeeManagement';
 import ProfileView from './components/ProfileView';
-import ProductsView from './components/ProductsView';
 import Login from './components/Login';
 import { parseOrderText } from './services/geminiService';
-import { supabase } from './services/supabaseClient';
 import { Building2, Plus, X, Loader2, Sparkles } from 'lucide-react';
+
+const INITIAL_EMPLOYEES: User[] = [
+  { id: '1', name: 'Admin Root', username: 'admin', role: UserRole.ADMIN, password: 'admin', company: Company.RESEVALLEY },
+  { id: '2', name: 'Sarah Miller', username: 'sarah_m', role: UserRole.EMPLOYEE, password: 'password', company: Company.RESEVALLEY },
+  { id: '3', name: 'Mike Johnson', username: 'mike_j', role: UserRole.EMPLOYEE, password: 'password', company: Company.ROSEWORLD },
+  { id: '4', name: 'Rose Admin', username: 'admin', role: UserRole.ADMIN, password: 'admin', company: Company.ROSEWORLD },
+];
 
 const App: React.FC = () => {
   const [company, setCompany] = useState<Company | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'orders' | 'employees' | 'profile'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'dashboard' | 'employees' | 'profile'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
-  const [employees, setEmployees] = useState<User[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [employees, setEmployees] = useState<User[]>(INITIAL_EMPLOYEES);
   
   // Filtering states
   const [dateFilter, setDateFilter] = useState('all');
@@ -32,54 +35,40 @@ const App: React.FC = () => {
   const [isParsing, setIsParsing] = useState(false);
 
   useEffect(() => {
-    const checkSession = async () => {
-      const savedUser = localStorage.getItem('current_user');
-      if (savedUser) {
-        const user = JSON.parse(savedUser);
-        setCurrentUser(user);
-        setCompany(user.company);
-        setActiveTab(user.role === UserRole.ADMIN ? 'dashboard' : 'products');
-      }
-      setIsLoading(false);
-    };
-    checkSession();
+    const savedOrders = localStorage.getItem('orders_data');
+    if (savedOrders) setOrders(JSON.parse(savedOrders));
+    
+    const savedEmployees = localStorage.getItem('employees_data');
+    if (savedEmployees) setEmployees(JSON.parse(savedEmployees));
+
+    const savedUser = localStorage.getItem('current_user');
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      setCurrentUser(user);
+      setCompany(user.company);
+    }
   }, []);
 
   useEffect(() => {
-    if (company) {
-      fetchData();
+    localStorage.setItem('orders_data', JSON.stringify(orders));
+  }, [orders]);
+
+  useEffect(() => {
+    localStorage.setItem('employees_data', JSON.stringify(employees));
+    // Sync current user session if their data in the list changes
+    if (currentUser) {
+      const updatedMe = employees.find(e => e.id === currentUser.id);
+      if (updatedMe && (updatedMe.name !== currentUser.name || updatedMe.profilePicture !== currentUser.profilePicture)) {
+        setCurrentUser(updatedMe);
+        localStorage.setItem('current_user', JSON.stringify(updatedMe));
+      }
     }
-  }, [company]);
-
-  const fetchData = async () => {
-    if (!company) return;
-
-    // Fetch Employees
-    const { data: emps } = await supabase.from('users').select('*').eq('company', company);
-    if (emps) setEmployees(emps.map(e => ({ ...e, profilePicture: e.profile_picture })));
-
-    // Fetch Products
-    const { data: prods } = await supabase.from('products').select('*').eq('company', company);
-    if (prods) setProducts(prods.map(p => ({
-      ...p,
-      salePrice: p.sale_price,
-      purchasePrice: p.purchase_price
-    })));
-
-    // Fetch Orders
-    const { data: ords } = await supabase.from('orders').select('*').eq('company', company).order('created_at', { ascending: false });
-    if (ords) setOrders(ords.map(o => ({
-      ...o,
-      creatorName: o.creator_name,
-      createdAt: new Date(o.created_at).getTime()
-    })));
-  };
+  }, [employees, currentUser]);
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     setCompany(user.company);
     localStorage.setItem('current_user', JSON.stringify(user));
-    setActiveTab(user.role === UserRole.ADMIN ? 'dashboard' : 'products');
   };
 
   const handleLogout = () => {
@@ -89,21 +78,16 @@ const App: React.FC = () => {
     setActiveTab('orders');
   };
 
-  const handleUpdateProfile = async (name: string, profilePicture: string) => {
+  const handleUpdateProfile = (name: string, profilePicture: string) => {
     if (!currentUser) return;
-    const { error } = await supabase
-      .from('users')
-      .update({ name, profile_picture: profilePicture })
-      .eq('id', currentUser.id);
-
-    if (!error) {
-      setCurrentUser({ ...currentUser, name, profilePicture });
-      setEmployees(employees.map(e => e.id === currentUser.id ? { ...e, name, profilePicture } : e));
-    }
+    const updatedEmployees = employees.map(e => 
+      e.id === currentUser.id ? { ...e, name, profilePicture } : e
+    );
+    setEmployees(updatedEmployees);
   };
 
   const handleAddOrder = async () => {
-    if (!orderText.trim() || !currentUser || !company) return;
+    if (!orderText.trim() || !currentUser) return;
     
     setIsParsing(true);
     const parsed = await parseOrderText(orderText);
@@ -112,102 +96,53 @@ const App: React.FC = () => {
       ? `<b>Name: </b> ${parsed.name}\n<b>Phone:</b> ${parsed.phone}\n<b>Address:</b> ${parsed.address}`
       : orderText;
 
-    const newOrder = {
-      company,
+    const newOrder: Order = {
+      id: Math.random().toString(36).substr(2, 9),
+      company: company!,
       content: formattedContent,
       status: OrderStatus.DRAFT,
-      created_by: currentUser.id,
-      creator_name: currentUser.name,
-      created_at: new Date().toISOString(),
+      createdBy: currentUser.id,
+      creatorName: currentUser.name,
+      createdAt: Date.now(),
     };
 
-    const { data, error } = await supabase.from('orders').insert([newOrder]).select();
-    
-    if (!error && data) {
-      setOrders([{ 
-        ...data[0], 
-        creatorName: data[0].creator_name, 
-        createdAt: new Date(data[0].created_at).getTime() 
-      }, ...orders]);
-      setOrderText('');
-      setShowAddOrderModal(false);
-    }
+    setOrders([newOrder, ...orders]);
+    setOrderText('');
+    setShowAddOrderModal(false);
     setIsParsing(false);
   };
 
-  const handleUpdateStatus = async (id: string, status: OrderStatus) => {
-    const { error } = await supabase.from('orders').update({ status }).eq('id', id);
-    if (!error) {
-      setOrders(orders.map(o => o.id === id ? { ...o, status } : o));
-    }
+  const handleUpdateStatus = (id: string, status: OrderStatus) => {
+    setOrders(orders.map(o => o.id === id ? { ...o, status } : o));
   };
 
-  const handleDeleteOrder = async (id: string) => {
-    const { error } = await supabase.from('orders').delete().eq('id', id);
-    if (!error) {
-      setOrders(orders.filter(o => o.id !== id));
-    }
+  const handleDeleteOrder = (id: string) => {
+    setOrders(orders.filter(o => o.id !== id));
   };
 
-  const handleAddProduct = async (productData: Partial<Product>) => {
-    if (!company) return;
-    const newProduct = {
-      company,
-      name: productData.name,
-      category: productData.category,
-      sale_price: productData.salePrice,
-      purchase_price: productData.purchasePrice,
-      image: productData.image,
-      description: productData.description,
-    };
-
-    const { data, error } = await supabase.from('products').insert([newProduct]).select();
-    if (!error && data) {
-      setProducts([{
-        ...data[0],
-        salePrice: data[0].sale_price,
-        purchasePrice: data[0].purchase_price
-      }, ...products]);
-    }
-  };
-
-  const handleDeleteProduct = async (id: string) => {
-    const { error } = await supabase.from('products').delete().eq('id', id);
-    if (!error) {
-      setProducts(products.filter(p => p.id !== id));
-    }
-  };
-
-  const handleAddEmployee = async (empData: Partial<User>) => {
-    if (!company) return;
-    const newEmp = {
-      name: empData.name,
-      username: empData.username,
+  const handleAddEmployee = (empData: Partial<User>) => {
+    const newEmp: User = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: empData.name || 'Unknown',
+      username: empData.username || 'user',
       role: empData.role || UserRole.EMPLOYEE,
-      password: empData.password,
-      company,
-      profile_picture: empData.profilePicture,
+      password: empData.password || 'password',
+      company: company!,
+      profilePicture: empData.profilePicture,
     };
-
-    const { data, error } = await supabase.from('users').insert([newEmp]).select();
-    if (!error && data) {
-      setEmployees([{
-        ...data[0],
-        profilePicture: data[0].profile_picture
-      }, ...employees]);
-    }
+    setEmployees([...employees, newEmp]);
   };
 
-  const handleDeleteEmployee = async (id: string) => {
-    if (currentUser?.id === id) return alert("You cannot delete yourself.");
-    const { error } = await supabase.from('users').delete().eq('id', id);
-    if (!error) {
-      setEmployees(employees.filter(e => e.id !== id));
+  const handleDeleteEmployee = (id: string) => {
+    if (currentUser && currentUser.id === id) {
+      alert("You cannot delete yourself.");
+      return;
     }
+    setEmployees(employees.filter(e => e.id !== id));
   };
 
   const getFilteredOrders = () => {
-    let filtered = orders;
+    let filtered = orders.filter(o => o.company === company);
     const now = new Date();
 
     if (dateFilter === 'today') {
@@ -231,7 +166,7 @@ const App: React.FC = () => {
     return filtered;
   };
 
-  if (isLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600" size={48} /></div>;
+  const activeOrders = getFilteredOrders();
 
   if (!company) {
     return (
@@ -245,9 +180,20 @@ const App: React.FC = () => {
               Select your organization to get started.
             </p>
           </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-8 px-4">
-            <CompanyButton name={Company.RESEVALLEY} color="indigo" desc="Premium Estate Solutions" onClick={() => setCompany(Company.RESEVALLEY)} />
-            <CompanyButton name={Company.ROSEWORLD} color="rose" desc="Global Floral Logistics" onClick={() => setCompany(Company.ROSEWORLD)} />
+            <CompanyButton 
+              name={Company.RESEVALLEY} 
+              color="indigo" 
+              desc="Premium Estate Solutions" 
+              onClick={() => setCompany(Company.RESEVALLEY)} 
+            />
+            <CompanyButton 
+              name={Company.ROSEWORLD} 
+              color="rose" 
+              desc="Global Floral Logistics" 
+              onClick={() => setCompany(Company.ROSEWORLD)} 
+            />
           </div>
         </div>
       </div>
@@ -255,46 +201,69 @@ const App: React.FC = () => {
   }
 
   if (!currentUser) {
-    return <Login company={company} onLogin={handleLogin} onBack={() => setCompany(null)} />;
+    return (
+      <Login 
+        company={company} 
+        employees={employees} 
+        onLogin={handleLogin} 
+        onBack={() => setCompany(null)} 
+      />
+    );
   }
 
   return (
-    <Layout company={company} role={currentUser.role} activeTab={activeTab as any} setActiveTab={setActiveTab as any} onLogout={handleLogout} user={currentUser}>
-      {activeTab === 'dashboard' && currentUser.role === UserRole.ADMIN && (
-        <AdminDashboard 
-          orders={getFilteredOrders()} 
-          employees={employees} 
-          dateFilter={dateFilter} 
-          onDateFilterChange={setDateFilter} 
-          customStartDate={customStartDate} 
-          onCustomStartDateChange={setCustomStartDate} 
-          customEndDate={customEndDate} 
-          onCustomEndDateChange={setCustomEndDate} 
-        />
-      )}
-      {activeTab === 'products' && (
-        <ProductsView products={products} role={currentUser.role} onAddProduct={handleAddProduct} onDeleteProduct={handleDeleteProduct} />
-      )}
+    <Layout 
+      company={company} 
+      role={currentUser.role} 
+      activeTab={activeTab as any}
+      setActiveTab={setActiveTab as any}
+      onLogout={handleLogout}
+      user={currentUser}
+    >
       {activeTab === 'orders' && (
         <OrdersView 
-          orders={getFilteredOrders()} 
-          role={currentUser.role} 
-          onAddOrder={() => setShowAddOrderModal(true)} 
-          onUpdateStatus={handleUpdateStatus} 
-          onDeleteOrder={handleDeleteOrder} 
-          currentUserId={currentUser.id} 
-          dateFilter={dateFilter} 
-          onDateFilterChange={setDateFilter} 
-          customStartDate={customStartDate} 
-          onCustomStartDateChange={setCustomStartDate} 
-          customEndDate={customEndDate} 
-          onCustomEndDateChange={setCustomEndDate} 
+          orders={activeOrders}
+          role={currentUser.role}
+          onAddOrder={() => setShowAddOrderModal(true)}
+          onUpdateStatus={handleUpdateStatus}
+          onDeleteOrder={handleDeleteOrder}
+          currentUserId={currentUser.id}
+          dateFilter={dateFilter}
+          onDateFilterChange={setDateFilter}
+          customStartDate={customStartDate}
+          onCustomStartDateChange={setCustomStartDate}
+          customEndDate={customEndDate}
+          onCustomEndDateChange={setCustomEndDate}
         />
       )}
-      {activeTab === 'employees' && currentUser.role === UserRole.ADMIN && (
-        <EmployeeManagement employees={employees} onAddEmployee={handleAddEmployee} onDeleteEmployee={handleDeleteEmployee} />
+
+      {activeTab === 'dashboard' && currentUser.role === UserRole.ADMIN && (
+        <AdminDashboard 
+          orders={activeOrders}
+          employees={employees.filter(e => e.company === company)}
+          dateFilter={dateFilter}
+          onDateFilterChange={setDateFilter}
+          customStartDate={customStartDate}
+          onCustomStartDateChange={setCustomStartDate}
+          customEndDate={customEndDate}
+          onCustomEndDateChange={setCustomEndDate}
+        />
       )}
-      {activeTab === 'profile' && <ProfileView user={currentUser} onUpdate={handleUpdateProfile} />}
+
+      {activeTab === 'employees' && currentUser.role === UserRole.ADMIN && (
+        <EmployeeManagement 
+          employees={employees.filter(e => e.company === company)}
+          onAddEmployee={handleAddEmployee}
+          onDeleteEmployee={handleDeleteEmployee}
+        />
+      )}
+
+      {activeTab === 'profile' && (
+        <ProfileView 
+          user={currentUser} 
+          onUpdate={handleUpdateProfile} 
+        />
+      )}
 
       {showAddOrderModal && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
@@ -304,19 +273,38 @@ const App: React.FC = () => {
                 <h3 className="text-xl lg:text-2xl font-black text-gray-900">New Order Entry</h3>
                 <p className="text-xs text-gray-500">Enter customer details for processing.</p>
               </div>
-              <button onClick={() => setShowAddOrderModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={24} /></button>
+              <button onClick={() => setShowAddOrderModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <X size={24} className="text-gray-400" />
+              </button>
             </div>
+            
             <div className="p-5 lg:p-8 space-y-6">
-              <textarea 
-                className="w-full h-48 lg:h-64 p-4 lg:p-6 bg-gray-50 border-2 border-transparent focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 rounded-2xl outline-none transition-all text-sm"
-                placeholder="Paste info here..."
-                value={orderText}
-                onChange={e => setOrderText(e.target.value)}
-                disabled={isParsing}
-              />
+              <div className="relative">
+                <textarea 
+                  className="w-full h-48 lg:h-64 p-4 lg:p-6 bg-gray-50 border-2 border-transparent focus:bg-white focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 rounded-2xl outline-none transition-all text-sm leading-relaxed"
+                  placeholder="Paste info here (Name, Phone, Address...)"
+                  value={orderText}
+                  onChange={e => setOrderText(e.target.value)}
+                  disabled={isParsing}
+                />
+                <div className="absolute bottom-3 right-3 flex items-center gap-1.5 text-[9px] font-bold text-indigo-500 uppercase tracking-tighter bg-white/90 px-2 py-1 rounded-lg border border-indigo-100">
+                  <Sparkles size={10} /> AI Assisted
+                </div>
+              </div>
+
               <div className="flex flex-col sm:flex-row gap-3">
-                <button onClick={() => setShowAddOrderModal(false)} className="w-full py-4 bg-gray-100 text-gray-700 rounded-2xl font-bold transition-all hover:bg-gray-200" disabled={isParsing}>Discard</button>
-                <button onClick={handleAddOrder} disabled={isParsing || !orderText.trim()} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-xl flex items-center justify-center gap-2">
+                <button 
+                  onClick={() => setShowAddOrderModal(false)}
+                  className="w-full py-4 bg-gray-100 text-gray-700 rounded-2xl font-bold order-2 sm:order-1 transition-all hover:bg-gray-200"
+                  disabled={isParsing}
+                >
+                  Discard
+                </button>
+                <button 
+                  onClick={handleAddOrder}
+                  disabled={isParsing || !orderText.trim()}
+                  className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-xl shadow-indigo-100 flex items-center justify-center gap-2 order-1 sm:order-2 disabled:opacity-50 transition-all hover:bg-indigo-700"
+                >
                   {isParsing ? <Loader2 className="animate-spin" size={20} /> : <Plus size={20} />}
                   {isParsing ? 'Processing AI...' : 'Add Order'}
                 </button>
@@ -330,10 +318,18 @@ const App: React.FC = () => {
 };
 
 const CompanyButton: React.FC<{ name: string, color: string, desc: string, onClick: () => void }> = ({ name, color, desc, onClick }) => (
-  <button onClick={onClick} className="group relative bg-white p-6 lg:p-8 rounded-3xl shadow-md lg:shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border-2 border-transparent hover:border-indigo-200 overflow-hidden text-center">
-    <div className={`w-14 h-14 lg:w-20 lg:h-20 ${color === 'rose' ? 'bg-rose-100 text-rose-600' : 'bg-indigo-100 text-indigo-600'} rounded-2xl flex items-center justify-center mx-auto mb-4`}><Building2 size={32} /></div>
+  <button 
+    onClick={onClick}
+    className="group relative bg-white p-6 lg:p-8 rounded-3xl shadow-md lg:shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border-2 border-transparent hover:border-indigo-200 overflow-hidden text-center"
+  >
+    <div className={`w-14 h-14 lg:w-20 lg:h-20 ${color === 'rose' ? 'bg-rose-100 text-rose-600' : 'bg-indigo-100 text-indigo-600'} rounded-2xl flex items-center justify-center mx-auto mb-4`}>
+      <Building2 size={32} />
+    </div>
     <h2 className="text-lg lg:text-2xl font-bold text-slate-900">{name}</h2>
     <p className="text-[10px] lg:text-sm text-slate-400 mt-1">{desc}</p>
+    <div className={`mt-4 w-full py-2 ${color === 'rose' ? 'bg-rose-600' : 'bg-indigo-600'} text-white rounded-full text-xs font-black shadow-lg opacity-0 lg:group-hover:opacity-100 transition-opacity`}>
+      Enter Organization
+    </div>
   </button>
 );
 

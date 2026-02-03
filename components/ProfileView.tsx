@@ -85,13 +85,12 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, onUpdate }) => {
           </div>
 
           <div className="space-y-2">
-            {/* Fix: changed 'Username (Locked)' to 'Phone Number (Locked)' and 'user.username' to 'user.phone' because username is not in the User type */}
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-1">Phone Number (Locked)</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-1">Username (Locked)</label>
             <input 
               disabled
               type="text"
               className="w-full px-6 py-4 bg-gray-100 border-gray-200 rounded-2xl outline-none text-sm font-medium text-gray-400 cursor-not-allowed"
-              value={user.phone}
+              value={user.username}
             />
           </div>
 

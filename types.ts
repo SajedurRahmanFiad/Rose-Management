@@ -19,7 +19,7 @@ export enum Company {
 export interface User {
   id: string;
   name: string;
-  phone: string;
+  username: string;
   role: UserRole;
   password?: string;
   company: Company;
@@ -45,12 +45,4 @@ export interface Product {
   purchasePrice: number;
   image?: string;
   description?: string;
-}
-
-export interface Store {
-  id: string;
-  name: string;
-  logo?: string;
-  description: string;
-  color: string;
 }
